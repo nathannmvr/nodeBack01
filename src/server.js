@@ -1,25 +1,47 @@
 import http from 'node:http';
 import { json } from './util/json.js';
 import { randomUUID } from 'node:crypto';
+import { Database } from './database.js';
 
-const database = [];
+const database = new Database();
 const server = http.createServer(async (req, res) => {
     const { method, url } = req;
     await json(req, res);
+
     if (method === 'GET' && url === '/users') {
-        return res.end(JSON.stringify(database));
+        const users = database.select('users');
+        return res.end(JSON.stringify(users));
     }
+
     if (method === 'POST' && url === '/users') {
         const { name, email } = req.body;
         const user = {
             id: randomUUID(),
             name,
             email
-        }
-        database.push(user);
-        return res.end('Cadastro de usuários');
+        };
+        database.insert('users', user);
+        return res.writeHead(201).end('Cadastro de usuários');
     }
-    return res.end('Hello World.');
+
+    if (method === 'PUT' && url === '/users'){
+        const { id, name, email } = req.body;
+        const user = {
+            id,
+            name,
+            email
+        };
+        database.update('users', id, user);
+        return res.writeHead(202).end('Atualização de usuários');
+    }
+
+    if (method === 'DELETE' && url === '/users'){
+        const { id } = req.body;
+        database.delete('users', id);
+        return res.writeHead(202).end('Usuário deletado');
+    }
+    
+    return res.writeHead(404).end('Hello World');
 });
 
 server.listen(3333);
